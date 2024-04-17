@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"task1/internal/mysql"
 	"time"
 )
 
@@ -25,6 +26,12 @@ func main() {
 	flag.StringVar(&cfg.env, "enviroment", "development", "API DEVELOPMENT")
 	flag.Parse()
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	dsn := "jaspet:1337@tcp(localhost:3306)/VinylsGolang"
+	db, err := mysql.Connect(dsn)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
 
 	app := &application{
 		config: cfg,

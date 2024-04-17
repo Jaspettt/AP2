@@ -5,6 +5,8 @@ import (
 	"net/http"
 )
 
+type wrap map[string]any
+
 func (app *application) writeJSON(w http.ResponseWriter, status int, data any) error {
 	js, err := json.Marshal(data)
 	if err != nil {
