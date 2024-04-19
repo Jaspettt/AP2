@@ -2,44 +2,81 @@ package main
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 	"task1/internal/data"
-	"time"
 )
 
-func (app *application) createVinylHandler(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		Title   string   `json:"title"`
-		Year    int32    `json:"year"`
-		Runtime int32    `json:"runtime"`
-		Genres  []string `json:"genres"`
-	}
-	err := app.readJSON(r, &input)
-	if err != nil {
-		app.errorResponse(w, r, 400, err.Error())
-		return
-	}
-	fmt.Fprintf(w, "%+v\n", input)
+var NewVinyl data.Vinyl
+
+func (app *application) mainPage(w http.ResponseWriter, r *http.Request) {
+
+	log.WithFields(logrus.Fields{
+		"action": "mainPageHandler",
+		"method": r.Method,
+		"path":   r.URL.Path,
+	}).Info("Handling main page request")
+	http.ServeFile(w, r, "index.html")
 }
-func (app *application) showVinyl(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil || id < 1 {
-		app.errorResponse(w, r, 400, err.Error())
+func (app *application) GetAllVinyls(w http.ResponseWriter, r *http.Request) {
+	vinyls, err := data.GetAllVinyls()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	vinyl := data.Vinyls{
-		ID:        id,
-		CreatedAt: time.Now(),
-		Title:     "DAMN",
-		Artist:    "Kendrick Lamar",
-		Year:      2017,
-		Runtime:   96,
-		Genres:    []string{"hip-hop"},
-	}
-	err = app.writeJSON(w, 200, wrap{"vinyl": vinyl})
+
+	app.writeJSON(w, 200, vinyls)
+
+}
+func (app *application) GetVinylByID(w http.ResponseWriter, r *http.Request) {
+	vinylId := r.PathValue("id")
+	id, err := strconv.ParseInt(vinylId, 0, 0)
 	if err != nil {
-		app.errorResponse(w, r, 500, err.Error())
+		fmt.Sprintf("Incorrect id %v", err)
+	}
+
+	vinyl, err := data.GetVinylByID(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	app.writeJSON(w, 200, vinyl)
+}
+func (app *application) CreateVinyl(w http.ResponseWriter, r *http.Request) {
+	var vinyl data.Vinyl
+	err := app.readJSON(r, &vinyl)
+	if err != nil {
+		fmt.Sprintf("Incorrect json %v", err)
+	}
+	if err := data.CreateVinyl(&vinyl); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+}
+func (app *application) DeleteVinyl(w http.ResponseWriter, r *http.Request) {
+	vinylId := r.PathValue("id")
+	id, err := strconv.ParseInt(vinylId, 0, 0)
+	if err != nil {
+		fmt.Sprintf("Incorrect id %v", err)
+	}
+	if err := data.DeleteVinyl(id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+func (app *application) UpdateVinyl(w http.ResponseWriter, r *http.Request) {
+	updateVinyl := data.Vinyl{}
+	app.readJSON(r, &updateVinyl)
+	vinylId := r.PathValue("id")
+	id, err := strconv.ParseInt(vinylId, 0, 0)
+	if err != nil {
+		fmt.Sprintf("Incorrect id %v", err)
+	}
+	if err := data.UpdateVinyl(id, updateVinyl); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }

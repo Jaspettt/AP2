@@ -1,12 +1,11 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"log"
+	"github.com/sirupsen/logrus"
+
 	"net/http"
 	"os"
-	"task1/internal/mysql"
 	"time"
 )
 
@@ -16,26 +15,24 @@ type config struct {
 }
 type application struct {
 	config config
-	logger *log.Logger
 }
+
+var log = logrus.New()
 
 func main() {
 	var cfg config
 
-	flag.IntVar(&cfg.port, "port", 4000, "API server port")
-	flag.StringVar(&cfg.env, "enviroment", "development", "API DEVELOPMENT")
-	flag.Parse()
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
-	dsn := "jaspet:1337@tcp(localhost:3306)/VinylsGolang"
-	db, err := mysql.Connect(dsn)
+	log.SetFormatter(&logrus.JSONFormatter{})
+	logFile, err := os.OpenFile("application.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		panic(err)
+		log.Error("Failed to open log file: ", err)
+		return
 	}
-	defer db.Close()
+	defer logFile.Close()
 
+	log.SetOutput(logFile)
 	app := &application{
 		config: cfg,
-		logger: logger,
 	}
 
 	srv := http.Server{
@@ -45,8 +42,8 @@ func main() {
 		ReadTimeout:  time.Second * 15,
 		WriteTimeout: time.Second * 30,
 	}
-	logger.Printf("starting %s server on %s", cfg.env, srv.Addr)
-	err := srv.ListenAndServe()
+
+	err = srv.ListenAndServe()
 	log.Fatal(err)
 
 }
